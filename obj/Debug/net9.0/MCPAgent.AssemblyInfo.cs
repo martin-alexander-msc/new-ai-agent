@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MCPAgent")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3faff54081fbe5dd19337306f464d2e792d012a6")]
 [assembly: System.Reflection.AssemblyProductAttribute("MCPAgent")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MCPAgent")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
