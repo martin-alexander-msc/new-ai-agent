@@ -1,8 +1,12 @@
 version: '3.8'
 services:
   mcpagent:
-    build: .
+    
+    build:
+      context: .
+      dockerfile: dockefile
     ports:
-      - "8080:80"
+      - "5050:5050"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://*:5050
