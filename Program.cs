@@ -105,6 +105,8 @@ static async IAsyncEnumerable<string> ReadLinesAsync(StreamReader reader)
 }
 
 // MCP Agent streaming endpoint using Ollama
+
+// MCP Agent streaming endpoint using Ollama
 app.MapPost("/mcp-agent-stream", async (HttpRequest request, HttpResponse response) =>
 {
     // Read prompt from JSON body
@@ -127,8 +129,8 @@ app.MapPost("/mcp-agent-stream", async (HttpRequest request, HttpResponse respon
     using var httpClient = new HttpClient();
     using var ollamaResponse = await httpClient.PostAsync(ollamaUrl, httpContent);
     response.ContentType = "application/jsonl";
-    response.Headers.Add("X-Accel-Buffering", "no");
-    response.Headers.Add("Cache-Control", "no-cache");
+    response.Headers.Append("X-Accel-Buffering", "no");
+    response.Headers.Append("Cache-Control", "no-cache");
     using var stream = await ollamaResponse.Content.ReadAsStreamAsync();
     using var reader = new StreamReader(stream);
     await foreach (var line in ReadLinesAsync(reader))
@@ -139,6 +141,72 @@ app.MapPost("/mcp-agent-stream", async (HttpRequest request, HttpResponse respon
             await response.Body.FlushAsync();
         }
     }
+});
+
+// Simple in-memory RAG endpoint: context is the current time
+app.MapPost("/mcp-agent-rag", async (HttpRequest request) =>
+{
+    // Read prompt from JSON body
+    string body;
+    using (var localReader = new StreamReader(request.Body))
+    {
+        body = await localReader.ReadToEndAsync();
+    }
+    var json = System.Text.Json.JsonDocument.Parse(body).RootElement;
+    var prompt = json.GetProperty("prompt").GetString();
+
+    // In-memory repository: context is current time, with explicit LLM instruction
+    var context = $"The current server time is: {DateTime.Now:yyyy-MM-dd HH:mm:ss}.";
+    var instruction = "You must answer the user's question only if it can be answered using the provided context. If the context is not sufficient, reply: 'Sorry, I am unable to answer your question based on the provided context.'";
+    var ragPrompt = $"Context:\n{context}\n\nInstruction:\n{instruction}\n\nUser question:\n{prompt}";
+
+    // Call local Ollama instance
+    var ollamaUrl = "http://localhost:11434/api/chat";
+    var ollamaRequest = new {
+        model = "llama3.2",
+        messages = new[] {
+            new { role = "user", content = ragPrompt }
+        }
+    };
+    var httpContent = new StringContent(System.Text.Json.JsonSerializer.Serialize(ollamaRequest), System.Text.Encoding.UTF8, "application/json");
+    using var httpClient = new HttpClient();
+    var ollamaResponse = await httpClient.PostAsync(ollamaUrl, httpContent);
+    if (!ollamaResponse.IsSuccessStatusCode)
+    {
+        return Results.Json(new {
+            mcp_version = "1.0",
+            agent = "ollama-rag",
+            input = prompt,
+            context = context,
+            output = $"Ollama error: {ollamaResponse.StatusCode}"
+        });
+    }
+    var stringContent = await ollamaResponse.Content.ReadAsStringAsync();
+    var responseBuilder = new System.Text.StringBuilder();
+    using (var reader = new StringReader(stringContent))
+    {
+        string? line;
+        while ((line = reader.ReadLine()) != null)
+        {
+            try
+            {
+                var resp = System.Text.Json.JsonSerializer.Deserialize<OllamaChatResponse>(line);
+                if (resp?.message?.content != null)
+                    responseBuilder.Append(resp.message.content);
+            }
+            catch { /* ignore parse errors for incomplete lines */ }
+        }
+    }
+    var responseText = responseBuilder.ToString();
+
+    // Return MCP format
+    return Results.Json(new {
+        mcp_version = "1.0",
+        agent = "ollama-rag",
+        input = prompt,
+        context = context,
+        output = responseText
+    });
 });
 
 app.Run();
