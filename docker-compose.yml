@@ -10,3 +10,4 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://*:5050
+      - OPENAI_API_KEY=your-openai-api-key-here
