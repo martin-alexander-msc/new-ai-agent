@@ -156,8 +156,8 @@ app.MapPost("/mcp-agent-rag", async (HttpRequest request) =>
     var prompt = json.GetProperty("prompt").GetString();
 
     // In-memory repository: context is current time, with explicit LLM instruction
-    var context = $"The current server time is: {DateTime.Now:yyyy-MM-dd HH:mm:ss}.";
-    var instruction = "You must answer the user's question only if it can be answered using the provided context. If the context is not sufficient, reply: 'Sorry, I am unable to answer your question based on the provided context.'";
+    var context = $"The current local time is: {DateTime.Now:yyyy-MM-dd HH:mm:ss} in Lisbon.";
+    var instruction = "If the user's question can be answered by inferring from the provided context (for example, by converting time zones), you should do so. Keep your answer concise and only provide the final result, do not provide your inference details unless asked. Otherwise, reply: 'Sorry, I am unable to answer your question based on the provided context.'";
     var ragPrompt = $"Context:\n{context}\n\nInstruction:\n{instruction}\n\nUser question:\n{prompt}";
 
     // Call local Ollama instance
